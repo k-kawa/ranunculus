@@ -1,0 +1,36 @@
+@startuml{seq.png}
+hide footbox
+
+participant "Ranunculus(Ruby)" as ruby
+participant "UrlQueue(SQS)" as iq
+participant "ResultQueue(SQS)" as oq
+participant Redis as redis
+participant "Ranunculus(worker)" as worker
+
+ruby -> iq : URL
+worker --> iq : Long polling
+iq -> worker : URL
+
+worker ->] : Fetch html 
+worker <-] : Response
+
+worker --> iq : Delete the URL
+
+worker -> oq : Metadata of the response
+worker -> redis : Body of the reponse
+activate redis
+
+ruby --> oq : Long polling
+oq -> ruby : Metadata
+ruby -> redis : fetch
+redis -> ruby : Body of the response
+
+deactivate redis
+note over redis : Destroyed when ttl expired
+
+note over ruby
+     Parse the response, store some data
+     and push the next urls to the queue, etc.
+end note
+
+@enduml
