@@ -2,31 +2,75 @@
 hide footbox
 
 participant "Ranunculus(Ruby)" as ruby
+participant "POST /queues (API)" as api_new_q
+participant "POST /queues/id/jobs (API)" as api_new_j
+participant "GET /queues/id/results (API)" as api_get_r
+participant "DELETE /queues/id (API)" as api_delete_q
+
 participant "UrlQueue(SQS)" as iq
 participant "ResultQueue(SQS)" as oq
 participant Redis as redis
 participant "Ranunculus(worker)" as worker
 
-ruby -> iq : URL
+ruby -> api_new_q : HTTP with secret
+activate api_new_q
+api_new_q -> iq : Set up
+activate iq
+api_new_q -> oq : Set up
+activate oq
+api_new_q -> redis : Set up
+activate redis
+api_new_q -> ruby : OK
+deactivate api_new_q
+
+|||
+
+ruby -> api_new_j : URL
+activate api_new_j
+api_new_j -> iq : URL
+activate iq
+api_new_j -> ruby : OK
+deactivate api_new_j
 worker --> iq : Long polling
 iq -> worker : URL
 
-worker ->] : Fetch html 
+|||
+
+ruby --> api_get_r : Long Polling
+activate api_get_r
+api_get_r --> oq : Long Polling
+
+worker ->] : Fetch html
 worker <-] : Response
 
-worker --> iq : Delete the URL
-
-worker -> oq : Metadata of the response
 worker -> redis : Body of the reponse
+worker -> oq : Metadata of the response
+activate oq
+worker --> iq : Delete the URL
+deactivate iq
+
+oq -> api_get_r : Metadata
+api_get_r --> oq : Delete Metadata
+deactivate oq
+api_get_r -> redis : fetch
 activate redis
-
-ruby --> oq : Long polling
-oq -> ruby : Metadata
-ruby -> redis : fetch
-redis -> ruby : Body of the response
-
+redis -> api_get_r : Body of the response
+api_get_r --> redis : Delete
 deactivate redis
-note over redis : Destroyed when ttl expired
+
+api_get_r -> ruby : Response
+deactivate api_get_r
+
+ruby -> api_delete_q : Request with secret
+activate api_delete_q
+api_delete_q -> iq : Destroy
+deactivate iq
+api_delete_q -> oq : Destroy
+deactivate oq
+api_delete_q -> redis : Destroy
+deactivate redis
+api_delete_q -> ruby : OK
+deactivate api_delete_q
 
 note over ruby
      Parse the response, store some data

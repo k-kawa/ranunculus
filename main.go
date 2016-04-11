@@ -60,12 +60,20 @@ func NewApp() (app *cli.App) {
 
 	app.Commands = []cli.Command{
 		{
-			Name:    "start",
-			Aliases: []string{"s"},
-			Usage:   "Start process",
+			Name:    "start_worker",
+			Usage:   "Start worker process",
 			Action: wrapCliContext(
 				c,
-				wrapRedis(commands.Start),
+				wrapRedis(commands.StartWorker),
+			),
+			Flags: flags,
+		},
+		{
+			Name:    "start_api",
+			Usage:   "Start API setver process",
+			Action: wrapCliContext(
+				c,
+				wrapRedis(commands.StartApi),
 			),
 			Flags: flags,
 		},

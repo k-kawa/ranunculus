@@ -71,7 +71,7 @@ func newRedisObject(res *http.Response) []byte {
 	return data
 }
 
-func Start(ctx context.Context) {
+func StartWorker(ctx context.Context) {
 
 	c := ctx.Value(constants.CtxCliContext).(*cli.Context)
 
